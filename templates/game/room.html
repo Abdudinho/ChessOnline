@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game — {{ game.id|truncatechars:8 }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #312e2b;
+            min-height: 100vh;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: #262421;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #3d3a37;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            text-decoration: none;
+        }
+        .logo-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #81b64c, #5d9948);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .game-id {
+            font-size: 13px;
+            color: #888;
+            background: #3d3a37;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* Main layout */
+        .game-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 24px;
+            padding: 24px 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Board section */
+        .board-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .player-bar {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: #262421;
+            border-radius: 8px;
+            margin: 6px 0;
+            border: 1px solid #3d3a37;
+        }
+        .player-bar.active {
+            border-color: #81b64c;
+            box-shadow: 0 0 0 1px #81b64c;
+        }
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .player-avatar.white { background: #f0d9b5; color: #312e2b; }
+        .player-avatar.black { background: #b58863; color: #fff; }
+        .player-info { flex: 1; }
+        .player-name { font-weight: 600; font-size: 15px; }
+        .player-status { font-size: 12px; color: #888; margin-top: 2px; }
+        .player-timer {
+            font-size: 20px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #ccc;
+        }
+
+        #board {
+            width: 480px;
+            max-width: 95vw;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        /* Side panel */
+        .side-panel {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .panel {
+            background: #262421;
+            border: 1px solid #3d3a37;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: 14px;
+            border-bottom: 1px solid #3d3a37;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-body { padding: 16px; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .status-waiting { background: #3d3a37; color: #f0c14b; }
+        .status-playing { background: rgba(129,182,76,0.2); color: #81b64c; }
+        .status-finished { background: rgba(220,80,80,0.2); color: #e74c3c; }
+
+        /* Join form */
+        .join-form { display: flex; flex-direction: column; gap: 10px; }
+        .join-form input {
+            background: #312e2b;
+            border: 1px solid #3d3a37;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+        .join-form input:focus { border-color: #81b64c; }
+        .btn-row { display: flex; gap: 8px; }
+        .btn {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-white {
+            background: #f0d9b5;
+            color: #312e2b;
+        }
+        .btn-white:hover { background: #e8d0a8; }
+        .btn-black {
+            background: #b58863;
+            color: #fff;
+        }
+        .btn-black:hover { background: #a07850; }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Moves */
+        .moves-list {
+            max-height: 220px;
+            overflow-y: auto;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+        .moves-list::-webkit-scrollbar { width: 6px; }
+        .moves-list::-webkit-scrollbar-thumb { background: #3d3a37; border-radius: 3px; }
+        .move-row {
+            display: flex;
+            padding: 4px 0;
+            border-bottom: 1px solid #2e2b28;
+        }
+        .move-num { width: 30px; color: #666; }
+        .move-san { flex: 1; color: #ccc; }
+
+        /* Share */
+        .share-box {
+            display: flex;
+            gap: 8px;
+        }
+        .share-box input {
+            flex: 1;
+            background: #312e2b;
+            border: 1px solid #3d3a37;
+            color: #aaa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .btn-copy {
+            background: #81b64c;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .btn-copy:hover { background: #6fa03e; }
+
+        .my-color-badge {
+            display: none;
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .my-color-badge.show { display: block; }
+        .my-color-badge.white { background: rgba(240,217,181,0.15); color: #f0d9b5; }
+        .my-color-badge.black { background: rgba(181,136,99,0.2); color: #d4a574; }
+
+        /* Responsive */
+        @media (max-width: 820px) {
+            .side-panel { width: 100%; max-width: 480px; }
+            #board { width: 100%; max-width: 480px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/game/static" class="logo">
+            <div class="logo-icon">♟</div>
+            Chess Online
+        </a>
+        <span class="game-id">#{{ game.id|truncatechars:13 }}</span>
+    </nav>
+
+    <div class="game-container">
+        <!-- Board -->
+        <div class="board-section">
+            <!-- Black player (top) -->
+            <div class="player-bar" id="black-bar">
+                <div class="player-avatar black">♚</div>
+                <div class="player-info">
+                    <div class="player-name" id="black-name">Kutilmoqda...</div>
+                    <div class="player-status" id="black-status">Qora</div>
+                </div>
+            </div>
+
+            <div id="board"></div>
+
+            <!-- White player (bottom) -->
+            <div class="player-bar" id="white-bar">
+                <div class="player-avatar white">♔</div>
+                <div class="player-info">
+                    <div class="player-name" id="white-name">Kutilmoqda...</div>
+                    <div class="player-status" id="white-status">Oq</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Side panel -->
+        <div class="side-panel">
+            <!-- Status -->
+            <div class="panel">
+                <div class="panel-header">📊 O‘yin holati</div>
+                <div class="panel-body">
+                    <span class="status-badge status-waiting" id="status-badge">Kutilmoqda</span>
+                    <div class="my-color-badge" id="my-color-badge"></div>
+                </div>
+            </div>
+
+            <!-- Join -->
+            <div class="panel" id="join-panel">
+                <div class="panel-header">🎮 O‘yinga qo‘shilish</div>
+                <div class="panel-body">
+                    <div class="join-form">
+                        <input type="text" id="player-name" placeholder="Ismingizni kiriting" value="Player" maxlength="20">
+                        <div class="btn-row">
+                            <button class="btn btn-white" id="btn-white" onclick="join('white')">♔ Oq</button>
+                            <button class="btn btn-black" id="btn-black" onclick="join('black')">♚ Qora</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Share link -->
+            <div class="panel">
+                <div class="panel-header">🔗 Do‘stingizni taklif qiling</div>
+                <div class="panel-body">
+                    <div class="share-box">
+                        <input type="text" id="share-link" readonly value="">
+                        <button class="btn-copy" onclick="copyLink()">Nusxa</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Moves -->
+            <div class="panel">
+                <div class="panel-header">📝 Yurishlar</div>
+                <div class="panel-body">
+                    <div class="moves-list" id="moves-list">
+                        <div style="color:#666; text-align:center; padding:10px;">Hali yurish yo‘q</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+    <script>
+        const gameId = "{{ game.id }}";
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/game/${gameId}/`);
+
+        let board = null;
+        let chessGame = new Chess();
+        let myColor = null;
+        let moveHistory = [];
+
+        // Share link
+        document.getElementById('share-link').value = window.location.href;
+
+        function copyLink() {
+            const input = document.getElementById('share-link');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                const btn = document.querySelector('.btn-copy');
+                btn.textContent = '✓ Nusxa olindi';
+                setTimeout(() => btn.textContent = 'Nusxa', 2000);
+            });
+        }
+
+        function updateStatus(status) {
+            const badge = document.getElementById('status-badge');
+            badge.className = 'status-badge';
+            if (status === 'waiting') {
+                badge.classList.add('status-waiting');
+                badge.textContent = 'Kutilmoqda';
+            } else if (status === 'playing') {
+                badge.classList.add('status-playing');
+                badge.textContent = 'O‘ynalmoqda';
+            } else {
+                badge.classList.add('status-finished');
+                badge.textContent = 'Tugadi';
+            }
+        }
+
+        function updatePlayers(white, black) {
+            document.getElementById('white-name').textContent = white || 'Kutilmoqda...';
+            document.getElementById('black-name').textContent = black || 'Kutilmoqda...';
+
+            if (white) document.getElementById('btn-white').disabled = true;
+            if (black) document.getElementById('btn-black').disabled = true;
+
+            if (white && black) {
+                document.getElementById('join-panel').style.opacity = '0.5';
+            }
+        }
+
+        function highlightTurn() {
+            const turn = chessGame.turn();
+            document.getElementById('white-bar').classList.toggle('active', turn === 'w' && chessGame.game_over() === false);
+            document.getElementById('black-bar').classList.toggle('active', turn === 'b' && chessGame.game_over() === false);
+        }
+
+        function addMoveToList(san) {
+            moveHistory.push(san);
+            const list = document.getElementById('moves-list');
+            if (moveHistory.length === 1) list.innerHTML = '';
+
+            const moveNum = Math.ceil(moveHistory.length / 2);
+            if (moveHistory.length % 2 === 1) {
+                // White move — new row
+                const row = document.createElement('div');
+                row.className = 'move-row';
+                row.id = `move-${moveNum}`;
+                row.innerHTML = `<span class="move-num">${moveNum}.</span><span class="move-san">${san}</span><span class="move-san"></span>`;
+                list.appendChild(row);
+            } else {
+                // Black move
+                const row = document.getElementById(`move-${moveNum}`);
+                if (row) row.children[2].textContent = san;
+            }
+            list.scrollTop = list.scrollHeight;
+        }
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+
+            if (data.type === 'game_state') {
+                updatePlayers(data.white, data.black);
+                updateStatus(data.status);
+                chessGame.load(data.fen);
+                if (board) board.position(data.fen, false);
+                highlightTurn();
+            }
+
+            if (data.type === 'move') {
+                const move = chessGame.move(data.move, { sloppy: true });
+                if (move) {
+                    board.position(data.fen);
+                    addMoveToList(move.san);
+                } else {
+                    chessGame.load(data.fen);
+                    board.position(data.fen);
+                }
+                updateStatus(data.status);
+                highlightTurn();
+            }
+
+            if (data.type === 'error') {
+                alert(data.message);
+            }
+        };
+
+        socket.onclose = function() {
+            console.log('WebSocket yopildi');
+        };
+
+        function join(color) {
+            const name = document.getElementById('player-name').value.trim() || 'Player';
+            myColor = color;
+            socket.send(JSON.stringify({
+                action: 'join',
+                color: color,
+                name: name
+            }));
+
+            const badge = document.getElementById('my-color-badge');
+            badge.className = 'my-color-badge show ' + color;
+            badge.textContent = color === 'white' ? 'Siz Oq tomondasiz ♔' : 'Siz Qora tomondasiz ♚';
+
+            // Board orientation
+            if (color === 'black') {
+                board.orientation('black');
+            }
+        }
+
+        function onDragStart(source, piece) {
+            if (chessGame.game_over()) return false;
+            if (!myColor) return false;
+            if ((myColor === 'white' && piece.search(/^b/) !== -1) ||
+                (myColor === 'black' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+            if ((myColor === 'white' && chessGame.turn() !== 'w') ||
+                (myColor === 'black' && chessGame.turn() !== 'b')) {
+                return false;
+            }
+        }
+
+        function onDrop(source, target) {
+            const move = chessGame.move({
+                from: source,
+                to: target,
+                promotion: 'q'
+            });
+
+            if (move === null) return 'snapback';
+
+            // Undo locally — server confirms
+            chessGame.undo();
+
+            socket.send(JSON.stringify({
+                action: 'move',
+                move: source + target + (move.promotion || '')
+            }));
+        }
+
+        function onSnapEnd() {
+            board.position(chessGame.fen());
+        }
+
+        board = Chessboard('board', {
+            draggable: true,
+            position: 'start',
+            onDragStart: onDragStart,
+            onDrop: onDrop,
+            onSnapEnd: onSnapEnd,
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+            appearSpeed: 200,
+            moveSpeed: 150,
+        });
+
+        // Resize
+        window.addEventListener('resize', () => board.resize());
+    </script>
+</body>
+</html>

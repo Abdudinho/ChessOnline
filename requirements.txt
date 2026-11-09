@@ -1,0 +1,6 @@
+django>=4.2
+channels>=4.0
+daphne>=4.0
+channels-redis>=4.1
+python-chess>=1.999
+redis>=5.0
